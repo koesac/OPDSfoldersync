@@ -11,6 +11,7 @@ local InputDialog = require("ui/widget/inputdialog")
 local Menu = require("ui/widget/menu")
 local MultiInputDialog = require("ui/widget/multiinputdialog")
 local NetworkMgr = require("ui/network/manager")
+local DownloadMgr = require("ui/downloadmgr")
 local Notification = require("ui/widget/notification")
 local OPDSParser = require("opdsparser")
 local OPDSPSE = require("opdspse")
@@ -316,18 +317,23 @@ function OPDSBrowser:addEditCatalog(item)
     button_sync_dir = Button:new{
         text = item and item.sync_dir and _("Sync folder: ") .. item.sync_dir or _("Set sync folder"),
         callback = function()
-            require("ui/widget/filechooser"):new{
-                title = _("Choose sync folder"),
-                path = item and item.sync_dir or self.settings.sync_dir or require("ffi/util").realpath("."),
-                show_hidden = G_reader_settings:readSetting("show_hidden"),
-                select_callback = function(path)
-                    button_sync_dir.sync_dir = path
-                    button_sync_dir:setText(_("Sync folder: ") .. path)
+            local force_chooser_dir_for_per_catalog
+            if Device:isAndroid() then
+                force_chooser_dir_for_per_catalog = Device.home_dir
+            end
+            
+            -- Use item.sync_dir or self.settings.sync_dir as initial path
+            local initial_path = item and item.sync_dir or self.settings.sync_dir or G_reader_settings:readSetting("download_dir")
+
+            DownloadMgr:new{
+                onConfirm = function(inbox)
+                    if inbox then -- Check if user selected a directory and not cancelled
+                        button_sync_dir.sync_dir = inbox
+                        button_sync_dir:setText(_("Sync folder: ") .. inbox)
+                        self._manager.updated = true -- Mark manager as updated for settings persistence
+                    end
                 end,
-                parent = dialog,
-                select_file = false, -- Only allow directory selection
-                show_files = false,  -- Do not show files, only directories
-            }:show()
+            }:chooseDir(initial_path or force_chooser_dir_for_per_catalog)
         end,
     }
     
