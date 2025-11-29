@@ -316,16 +316,16 @@ function OPDSBrowser:addEditCatalog(item)
     button_sync_dir = Button:new{
         text = item and item.sync_dir and _("Sync folder: ") .. item.sync_dir or _("Set sync folder"),
         callback = function()
-            local file_chooser_instance = FileChooser:new{
+            require("ui/widget/filechooser"):new{
                 title = _("Choose sync folder"),
-                path = item and item.sync_dir or self.settings.sync_dir or G_reader_settings:readSetting("download_dir"),
+                path = item and item.sync_dir or self.settings.sync_dir or require("ffi/util").realpath("."),
                 show_hidden = G_reader_settings:readSetting("show_hidden"),
                 select_callback = function(path)
                     button_sync_dir.sync_dir = path
                     button_sync_dir:setText(_("Sync folder: ") .. path)
                 end,
-            }
-            UIManager:show(file_chooser_instance)
+                parent = dialog,
+            }:show()
         end,
     }
     
