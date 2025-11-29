@@ -132,6 +132,18 @@ function OPDSBrowser:showOPDSMenu()
                     end,
                     align = "left",
             }},
+            {},
+            {{
+                    text = _("Exclude filters"),
+                    callback = function()
+                        
+                        self:showExcludeFiltersMenu()
+                    end,
+                    align = "left",
+            }},
+
+    
+
         },
         shrink_unneeded_width = true,
         anchor = function()
@@ -139,6 +151,110 @@ function OPDSBrowser:showOPDSMenu()
         end,
     }
     UIManager:show(dialog)
+end
+
+function OPDSBrowser:showExcludeFiltersMenu()  
+    local dialog  -- Declare first  
+    dialog = ButtonDialog:new{  
+        buttons = {  
+            {{  
+                text = _("Excluded Authors"),  
+                callback = function()  
+                    UIManager:close(dialog)  
+                    self:setExcludedAuthors()  
+                end,  
+                align = "left",  
+            }},  
+            {{  
+                text = _("Excluded Categories"),  
+                callback = function()  
+                    UIManager:close(dialog)  
+                    self:setExcludedCategories()  
+                end,  
+                align = "left",  
+            }}  
+        }  
+    }  
+    UIManager:show(dialog)  
+end
+function OPDSBrowser:setExcludedAuthors()  
+    local current_excluded = table.concat(self.settings.excluded_authors or {}, ", ")  
+    local dialog  -- Declare first  
+    dialog = InputDialog:new{  
+        title = _("Excluded Authors"),  
+        description = _("Comma-separated list of authors to exclude"),  
+        input_hint = _("Author One, Author Two"),  
+        input = current_excluded,  
+        buttons = {  
+            {  
+                {  
+                    text = _("Cancel"),  
+                    id = "close",  
+                    callback = function()  
+                        UIManager:close(dialog)  
+                    end,  
+                },  
+                {  
+                    text = _("Save"),  
+                    is_enter_default = true,  
+                    callback = function()  
+                        local input_text = dialog:getInputText()  
+                        self.settings.excluded_authors = {}  
+                        for author in util.gsplit(input_text, ",") do  
+                            table.insert(self.settings.excluded_authors, util.trim(author))  
+                        end  
+                        self._manager.updated = true  
+                        UIManager:close(dialog)  
+                        if self.paths and #self.paths > 0 and self.paths[#self.paths] then  
+                            self:updateCatalog(self.paths[#self.paths].url, true)  
+                        end   
+                    end,  
+                },  
+            },  
+        },  
+    }  
+    UIManager:show(dialog)  
+    dialog:onShowKeyboard()  
+end  
+  
+function OPDSBrowser:setExcludedCategories()  
+    local current_excluded = table.concat(self.settings.excluded_categories or {}, ", ")  
+    local dialog  -- Declare first  
+    dialog = InputDialog:new{  
+        title = _("Excluded Categories"),  
+        description = _("Comma-separated list of categories to exclude"),  
+        input_hint = _("Fiction, Non-Fiction"),  
+        input = current_excluded,  
+        buttons = {  
+            {  
+                {  
+                    text = _("Cancel"),  
+                    id = "close",  
+                    callback = function()  
+                        UIManager:close(dialog)  
+                    end,  
+                },  
+                {  
+                    text = _("Save"),  
+                    is_enter_default = true,  
+                    callback = function()  
+                        local input_text = dialog:getInputText()  
+                        self.settings.excluded_categories = {}  
+                        for category in util.gsplit(input_text, ",") do  
+                            table.insert(self.settings.excluded_categories, util.trim(category))  
+                        end  
+                        self._manager.updated = true  
+                        UIManager:close(dialog)  
+                        if self.paths and #self.paths > 0 and self.paths[#self.paths] then  
+                            self:updateCatalog(self.paths[#self.paths].url, true)  
+                        end   
+                    end,  
+                },  
+            },  
+        },  
+    }  
+    UIManager:show(dialog)  
+    dialog:onShowKeyboard()  
 end
 
 -- Shows facet menu for OPDS catalogs with facets/search support
@@ -735,7 +851,31 @@ function OPDSBrowser:genItemTableFromCatalog(catalog, item_url)
         item.title = title
         item.author = author
         item.content = entry.content or entry.summary
+
+        -- Check for excluded authors
+        if self.settings.excluded_authors then
+            local lower_author = (author or ""):lower()
+            for _, excluded_author in ipairs(self.settings.excluded_authors) do
+                if lower_author:find((excluded_author or ""):lower(), 1, true) then
+                    goto continue_entry
+                end
+            end
+        end
+
+        -- Check for excluded categories
+        if self.settings.excluded_categories and entry.category then
+            for _, excluded_category in ipairs(self.settings.excluded_categories) do
+                local lower_excluded_category = (excluded_category or ""):lower()
+                for _, category_entry in ipairs(entry.category) do
+                    if category_entry.term and category_entry.term:lower():find(lower_excluded_category, 1, true) then
+                        goto continue_entry
+                    end
+                end
+            end
+        end
+
         table.insert(item_table, item)
+        ::continue_entry::
     end
 
     if next(self.facet_groups) == nil then self.facet_groups = nil end -- Clear if empty
