@@ -325,6 +325,8 @@ function OPDSBrowser:addEditCatalog(item)
                     button_sync_dir:setText(_("Sync folder: ") .. path)
                 end,
                 parent = dialog,
+                select_file = false, -- Only allow directory selection
+                show_files = false,  -- Do not show files, only directories
             }:show()
         end,
     }
