@@ -1,5 +1,3 @@
--- luacheck: globals G_reader_settings
-
 local BD = require("ui/bidi")
 local Button = require("ui/widget/button")
 local ButtonDialog = require("ui/widget/buttondialog")
@@ -8,7 +6,6 @@ local CheckButton = require("ui/widget/checkbutton")
 local ConfirmBox = require("ui/widget/confirmbox")
 local Device = require("device")
 local DocumentRegistry = require("document/documentregistry")
-local FileChooser = require("ui/widget/filechooser")
 local InfoMessage = require("ui/widget/infomessage")
 local InputDialog = require("ui/widget/inputdialog")
 local Menu = require("ui/widget/menu")
@@ -294,7 +291,7 @@ function OPDSBrowser:addEditCatalog(item)
                         local new_fields = dialog:getFields()
                         new_fields[5] = check_button_raw_names.checked or nil
                         new_fields[6] = check_button_sync_catalog.checked or nil
-                        new_fields[7] = button_sync_dir.sync_dir or nil
+                        -- new_fields[7] = button_sync_dir.sync_dir or nil
                         self:editCatalogFromInput(new_fields, item)
                         UIManager:close(dialog)
                     end,
@@ -316,24 +313,24 @@ function OPDSBrowser:addEditCatalog(item)
     }
     
     -- Add sync directory button
-    button_sync_dir = Button:new{
-        text = item and item.sync_dir and _("Sync folder: ") .. item.sync_dir or _("Set sync folder"),
-        callback = function()
-            FileChooser:new{
-                title = _("Choose sync folder"),
-                path = item and item.sync_dir or self.settings.sync_dir or require("ffi/util").realpath("."),
-                show_hidden = G_reader_settings:readSetting("show_hidden"),
-                select_callback = function(path)
-                    button_sync_dir.sync_dir = path
-                    button_sync_dir:setText(_("Sync folder: ") .. path)
-                end,
-            }:show()
-        end,
-    }
+    -- button_sync_dir = Button:new{
+    --     text = item and item.sync_dir and _("Sync folder: ") .. item.sync_dir or _("Set sync folder"),
+    --     callback = function()
+    --         FileChooser:new{
+    --             title = _("Choose sync folder"),
+    --             path = item and item.sync_dir or self.settings.sync_dir or require("ffi/util").realpath("."),
+    --             show_hidden = G_reader_settings:readSetting("show_hidden"),
+    --             select_callback = function(path)
+    --                 button_sync_dir.sync_dir = path
+    --                 button_sync_dir:setText(_("Sync folder: ") .. path)
+    --             end,
+    --         }:show()
+    --     end,
+    -- }
     
     dialog:addWidget(check_button_raw_names)
     dialog:addWidget(check_button_sync_catalog)
-    dialog:addWidget(button_sync_dir)
+    -- dialog:addWidget(button_sync_dir)
     UIManager:show(dialog)
     dialog:onShowKeyboard()
 end
