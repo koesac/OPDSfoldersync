@@ -15,7 +15,7 @@ local T = require("ffi/util").template
 local OPDSPSE = {}
 
 -- This function attempts to pull chapter progress from Kavita.
-function OPDSPSE:getLastPage(remote_url, username, password)
+function OPDSPSE.getLastPage(remote_url, username, password)
     local last_page = 0
 
     -- create URL's and reference vars
@@ -169,7 +169,7 @@ function OPDSPSE:streamPages(remote_url, count, continue, username, password, la
 end
 
 -- Shows a page number dialog for page streaming.
-function OPDSPSE:jumpToPage(viewer, count)
+function OPDSPSE.jumpToPage(viewer, count)
     local input_dialog
     input_dialog = InputDialog:new{
         title = _("Enter page number"),

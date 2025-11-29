@@ -1,3 +1,5 @@
+-- luacheck: globals G_reader_settings
+
 local BD = require("ui/bidi")
 local Button = require("ui/widget/button")
 local ButtonDialog = require("ui/widget/buttondialog")
@@ -300,7 +302,6 @@ function OPDSBrowser:addEditCatalog(item)
             },
         },
     }
-    
     -- Existing check buttons...
     check_button_raw_names = CheckButton:new{
         text = _("Use server filenames"),
@@ -312,7 +313,6 @@ function OPDSBrowser:addEditCatalog(item)
         checked = item and item.sync,
         parent = dialog,
     }
-    
     -- Add sync directory button
     button_sync_dir = Button:new{
         text = item and item.sync_dir and _("Sync folder: ") .. item.sync_dir or _("Set sync folder"),
@@ -328,7 +328,6 @@ function OPDSBrowser:addEditCatalog(item)
             }:show()
         end,
     }
-    
     dialog:addWidget(check_button_raw_names)
     dialog:addWidget(check_button_sync_catalog)
     dialog:addWidget(button_sync_dir)
@@ -1482,7 +1481,7 @@ function OPDSBrowser:setSyncDir()
 end
 
 -- Set string for desired filetypes
-function OPDSBrowser:setSyncFiletypes(filetype_list)
+function OPDSBrowser:setSyncFiletypes()
     local input = self.settings.filetypes
     local dialog
     dialog = InputDialog:new{
