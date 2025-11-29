@@ -132,63 +132,11 @@ function OPDSBrowser:showOPDSMenu()
                     end,
                     align = "left",
             }},
-            {},
-            {{
-                    text = _("Filters"),
-                    callback = function()
-                        self:showFiltersMenu()
-                    end,
-                    align = "left",
-            }},
-
-    
-
         },
         shrink_unneeded_width = true,
         anchor = function()
             return self.title_bar.left_button.image.dimen
         end,
-    }
-    UIManager:show(dialog)
-end
-
-function OPDSBrowser:showFiltersMenu()
-    local dialog  -- Declare first
-    dialog = ButtonDialog:new{
-        buttons = {
-            {{
-                text = _("Excluded Authors"),
-                callback = function()
-                    UIManager:close(dialog)
-                    self:setExcludedAuthors()
-                end,
-                align = "left",
-            }},
-            {{
-                text = _("Excluded Categories"),
-                callback = function()
-                    UIManager:close(dialog)
-                    self:setExcludedCategories()
-                end,
-                align = "left",
-            }},
-            {{
-                text = _("Included Authors"),
-                callback = function()
-                    UIManager:close(dialog)
-                    self:setIncludedAuthors()
-                end,
-                align = "left",
-            }},
-            {{
-                text = _("Included Categories"),
-                callback = function()
-                    UIManager:close(dialog)
-                    self:setIncludedCategories()
-                end,
-                align = "left",
-            }}
-        }
     }
     UIManager:show(dialog)
 end
@@ -420,6 +368,41 @@ function OPDSBrowser:showFacetMenu()
         callback = function()
             UIManager:close(dialog)
             self:addSubCatalog(catalog_url)
+        end,
+        align = "left",
+    }})
+    table.insert(buttons, {}) -- separator
+
+    -- Add filter settings
+    table.insert(buttons, {{
+        text = "\u{f0b0} " .. _("Set excluded authors"),
+        callback = function()
+            UIManager:close(dialog)
+            self:setExcludedAuthors()
+        end,
+        align = "left",
+    }})
+    table.insert(buttons, {{
+        text = "\u{f0b0} " .. _("Set excluded categories"),
+        callback = function()
+            UIManager:close(dialog)
+            self:setExcludedCategories()
+        end,
+        align = "left",
+    }})
+    table.insert(buttons, {{
+        text = "\u{f0b0} " .. _("Set included authors"),
+        callback = function()
+            UIManager:close(dialog)
+            self:setIncludedAuthors()
+        end,
+        align = "left",
+    }})
+    table.insert(buttons, {{
+        text = "\u{f0b0} " .. _("Set included categories"),
+        callback = function()
+            UIManager:close(dialog)
+            self:setIncludedCategories()
         end,
         align = "left",
     }})
