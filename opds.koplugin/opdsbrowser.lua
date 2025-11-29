@@ -1,4 +1,5 @@
 local BD = require("ui/bidi")
+local Button = require("ui/widget/button")
 local ButtonDialog = require("ui/widget/buttondialog")
 local Cache = require("cache")
 local CheckButton = require("ui/widget/checkbutton")
