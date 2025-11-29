@@ -225,6 +225,7 @@ local function buildRootEntry(server)
         raw_names  = server.raw_names, -- use server raw filenames for download
         searchable = server.url and server.url:match("%%s") and true or false,
         sync       = server.sync,
+        sync_dir   = server.sync_dir,  -- Add this line
     }
 end
 
@@ -270,7 +271,7 @@ function OPDSBrowser:addEditCatalog(item)
         title = _("Add OPDS catalog")
     end
 
-    local dialog, check_button_raw_names, check_button_sync_catalog
+    local dialog, check_button_raw_names, check_button_sync_catalog, button_sync_dir
     dialog = MultiInputDialog:new{
         title = title,
         fields = fields,
@@ -289,6 +290,7 @@ function OPDSBrowser:addEditCatalog(item)
                         local new_fields = dialog:getFields()
                         new_fields[5] = check_button_raw_names.checked or nil
                         new_fields[6] = check_button_sync_catalog.checked or nil
+                        new_fields[7] = button_sync_dir.sync_dir or nil
                         self:editCatalogFromInput(new_fields, item)
                         UIManager:close(dialog)
                     end,
@@ -296,6 +298,8 @@ function OPDSBrowser:addEditCatalog(item)
             },
         },
     }
+    
+    -- Existing check buttons...
     check_button_raw_names = CheckButton:new{
         text = _("Use server filenames"),
         checked = item and item.raw_names,
@@ -306,8 +310,26 @@ function OPDSBrowser:addEditCatalog(item)
         checked = item and item.sync,
         parent = dialog,
     }
+    
+    -- Add sync directory button
+    button_sync_dir = Button:new{
+        text = item and item.sync_dir and _("Sync folder: ") .. item.sync_dir or _("Set sync folder"),
+        callback = function()
+            require("ui/widget/filechooser"):new{
+                title = _("Choose sync folder"),
+                path = item and item.sync_dir or self.settings.sync_dir or require("ffi/util").realpath("."),
+                show_hidden = G_reader_settings:readSetting("show_hidden"),
+                select_callback = function(path)
+                    button_sync_dir.sync_dir = path
+                    button_sync_dir:setText(_("Sync folder: ") .. path)
+                end,
+            }:show()
+        end,
+    }
+    
     dialog:addWidget(check_button_raw_names)
     dialog:addWidget(check_button_sync_catalog)
+    dialog:addWidget(button_sync_dir)
     UIManager:show(dialog)
     dialog:onShowKeyboard()
 end
@@ -356,6 +378,7 @@ function OPDSBrowser:editCatalogFromInput(fields, item, no_refresh)
         password  = fields[4] ~= "" and fields[4] or nil,
         raw_names = fields[5],
         sync      = fields[6],
+        sync_dir  = fields[7],  -- Add this line
     }
     local new_item = buildRootEntry(new_server)
     local new_idx, itemnumber
@@ -986,16 +1009,21 @@ function OPDSBrowser.getFiletype(link)
 end
 
 -- Returns user selected or last opened folder
-function OPDSBrowser:getCurrentDownloadDir()
-    if self.sync then
-        return self.settings.sync_dir
-    else
-        return G_reader_settings:readSetting("download_dir") or G_reader_settings:readSetting("lastdir")
+function OPDSBrowser:getCurrentDownloadDir(item)
+    -- Check if we have a per-catalog sync directory
+    if item and item.sync_dir then
+        return item.sync_dir
     end
+    -- Fall back to global sync directory
+    if self.settings.sync_dir then
+        return self.settings.sync_dir
+    end
+    -- Default download directory
+    return self.download_dir
 end
 
-function OPDSBrowser:getLocalDownloadPath(filename, filetype, remote_url)
-    local download_dir = self:getCurrentDownloadDir()
+function OPDSBrowser:getLocalDownloadPath(server, filename, filetype, remote_url)
+    local download_dir = self:getCurrentDownloadDir(server)
     filename = filename and filename .. "." .. filetype:lower() or self:getServerFileName(remote_url, filetype)
     filename = util.getSafeFilename(filename, download_dir)
     filename = (download_dir ~= "/" and download_dir or "") .. '/' .. filename
@@ -1583,7 +1611,7 @@ function OPDSBrowser:fillPendingSyncs(server)
                 if filetype then
                     if not file_str or file_list and file_list[filetype] then
                         local filename = self:getFileName(entry)
-                        local download_path = self:getLocalDownloadPath(filename, filetype, link.href)
+                        local download_path = self:getLocalDownloadPath(server, filename, filetype, link.href)
                         if dl_count <= self.sync_max_dl then -- Append only max_dl entries... may still have sync backlog
                             table.insert(self.pending_syncs, {
                                 file = download_path,
