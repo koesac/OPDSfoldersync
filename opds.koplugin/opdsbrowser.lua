@@ -291,7 +291,7 @@ function OPDSBrowser:addEditCatalog(item)
                         local new_fields = dialog:getFields()
                         new_fields[5] = check_button_raw_names.checked or nil
                         new_fields[6] = check_button_sync_catalog.checked or nil
-                        -- new_fields[7] = button_sync_dir.sync_dir or nil
+                        new_fields[7] = button_sync_dir.sync_dir or nil
                         self:editCatalogFromInput(new_fields, item)
                         UIManager:close(dialog)
                     end,
@@ -313,24 +313,25 @@ function OPDSBrowser:addEditCatalog(item)
     }
     
     -- Add sync directory button
-    -- button_sync_dir = Button:new{
-    --     text = item and item.sync_dir and _("Sync folder: ") .. item.sync_dir or _("Set sync folder"),
-    --     callback = function()
-    --         FileChooser:new{
-    --             title = _("Choose sync folder"),
-    --             path = item and item.sync_dir or self.settings.sync_dir or require("ffi/util").realpath("."),
-    --             show_hidden = G_reader_settings:readSetting("show_hidden"),
-    --             select_callback = function(path)
-    --                 button_sync_dir.sync_dir = path
-    --                 button_sync_dir:setText(_("Sync folder: ") .. path)
-    --             end,
-    --         }:show()
-    --     end,
-    -- }
+    button_sync_dir = Button:new{
+        text = item and item.sync_dir and _("Sync folder: ") .. item.sync_dir or _("Set sync folder"),
+        callback = function()
+            local file_chooser_instance = FileChooser:new{
+                title = _("Choose sync folder"),
+                path = item and item.sync_dir or self.settings.sync_dir or G_reader_settings:readSetting("download_dir"),
+                show_hidden = G_reader_settings:readSetting("show_hidden"),
+                select_callback = function(path)
+                    button_sync_dir.sync_dir = path
+                    button_sync_dir:setText(_("Sync folder: ") .. path)
+                end,
+            }
+            UIManager:show(file_chooser_instance)
+        end,
+    }
     
     dialog:addWidget(check_button_raw_names)
     dialog:addWidget(check_button_sync_catalog)
-    -- dialog:addWidget(button_sync_dir)
+    dialog:addWidget(button_sync_dir)
     UIManager:show(dialog)
     dialog:onShowKeyboard()
 end
