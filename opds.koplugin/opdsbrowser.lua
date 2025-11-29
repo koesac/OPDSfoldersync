@@ -6,6 +6,7 @@ local CheckButton = require("ui/widget/checkbutton")
 local ConfirmBox = require("ui/widget/confirmbox")
 local Device = require("device")
 local DocumentRegistry = require("document/documentregistry")
+local FileChooser = require("ui/widget/filechooser")
 local InfoMessage = require("ui/widget/infomessage")
 local InputDialog = require("ui/widget/inputdialog")
 local Menu = require("ui/widget/menu")
@@ -316,7 +317,7 @@ function OPDSBrowser:addEditCatalog(item)
     button_sync_dir = Button:new{
         text = item and item.sync_dir and _("Sync folder: ") .. item.sync_dir or _("Set sync folder"),
         callback = function()
-            require("ui/widget/filechooser"):new{
+            FileChooser:new{
                 title = _("Choose sync folder"),
                 path = item and item.sync_dir or self.settings.sync_dir or require("ffi/util").realpath("."),
                 show_hidden = G_reader_settings:readSetting("show_hidden"),
