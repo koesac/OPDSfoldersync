@@ -134,10 +134,9 @@ function OPDSBrowser:showOPDSMenu()
             }},
             {},
             {{
-                    text = _("Exclude filters"),
+                    text = _("Filters"),
                     callback = function()
-                        
-                        self:showExcludeFiltersMenu()
+                        self:showFiltersMenu()
                     end,
                     align = "left",
             }},
@@ -153,29 +152,45 @@ function OPDSBrowser:showOPDSMenu()
     UIManager:show(dialog)
 end
 
-function OPDSBrowser:showExcludeFiltersMenu()  
-    local dialog  -- Declare first  
-    dialog = ButtonDialog:new{  
-        buttons = {  
-            {{  
-                text = _("Excluded Authors"),  
-                callback = function()  
-                    UIManager:close(dialog)  
-                    self:setExcludedAuthors()  
-                end,  
-                align = "left",  
-            }},  
-            {{  
-                text = _("Excluded Categories"),  
-                callback = function()  
-                    UIManager:close(dialog)  
-                    self:setExcludedCategories()  
-                end,  
-                align = "left",  
-            }}  
-        }  
-    }  
-    UIManager:show(dialog)  
+function OPDSBrowser:showFiltersMenu()
+    local dialog  -- Declare first
+    dialog = ButtonDialog:new{
+        buttons = {
+            {{
+                text = _("Excluded Authors"),
+                callback = function()
+                    UIManager:close(dialog)
+                    self:setExcludedAuthors()
+                end,
+                align = "left",
+            }},
+            {{
+                text = _("Excluded Categories"),
+                callback = function()
+                    UIManager:close(dialog)
+                    self:setExcludedCategories()
+                end,
+                align = "left",
+            }},
+            {{
+                text = _("Included Authors"),
+                callback = function()
+                    UIManager:close(dialog)
+                    self:setIncludedAuthors()
+                end,
+                align = "left",
+            }},
+            {{
+                text = _("Included Categories"),
+                callback = function()
+                    UIManager:close(dialog)
+                    self:setIncludedCategories()
+                end,
+                align = "left",
+            }}
+        }
+    }
+    UIManager:show(dialog)
 end
 function OPDSBrowser:setExcludedAuthors()
     -- Find current server
@@ -285,6 +300,114 @@ function OPDSBrowser:setExcludedCategories()
     dialog:onShowKeyboard()
 end
 
+function OPDSBrowser:setIncludedAuthors()
+    -- Find current server
+    local current_server = nil
+    for _, server in ipairs(self.servers) do
+        if server.title == self.root_catalog_title then
+            current_server = server
+            break
+        end
+    end
+
+    if not current_server then
+        UIManager:show(InfoMessage:new{text = _("No catalog selected")})
+        return
+    end
+
+    local current_included = table.concat(current_server.included_authors or {}, ", ")
+    local dialog
+    dialog = InputDialog:new{
+        title = _("Included Authors"),
+        description = _("Comma-separated list of authors to include"),
+        input_hint = _("Author One, Author Two"),
+        input = current_included,
+        buttons = {
+            {
+                {
+                    text = _("Cancel"),
+                    id = "close",
+                    callback = function()
+                        UIManager:close(dialog)
+                    end,
+                },
+                {
+                    text = _("Save"),
+                    is_enter_default = true,
+                    callback = function()
+                        local input_text = dialog:getInputText()
+                        current_server.included_authors = {}
+                        for author in util.gsplit(input_text, ",") do
+                            table.insert(current_server.included_authors, util.trim(author))
+                        end
+                        self._manager.updated = true
+                        UIManager:close(dialog)
+                        if self.paths and #self.paths > 0 and self.paths[#self.paths] then
+                            self:updateCatalog(self.paths[#self.paths].url, true)
+                        end
+                    end,
+                },
+            },
+        },
+    }
+    UIManager:show(dialog)
+    dialog:onShowKeyboard()
+end
+
+function OPDSBrowser:setIncludedCategories()
+    -- Find current server
+    local current_server = nil
+    for _, server in ipairs(self.servers) do
+        if server.title == self.root_catalog_title then
+            current_server = server
+            break
+        end
+    end
+
+    if not current_server then
+        UIManager:show(InfoMessage:new{text = _("No catalog selected")})
+        return
+    end
+
+    local current_included = table.concat(current_server.included_categories or {}, ", ")
+    local dialog
+    dialog = InputDialog:new{
+        title = _("Included Categories"),
+        description = _("Comma-separated list of categories to include"),
+        input_hint = _("Fiction, Non-Fiction"),
+        input = current_included,
+        buttons = {
+            {
+                {
+                    text = _("Cancel"),
+                    id = "close",
+                    callback = function()
+                        UIManager:close(dialog)
+                    end,
+                },
+                {
+                    text = _("Save"),
+                    is_enter_default = true,
+                    callback = function()
+                        local input_text = dialog:getInputText()
+                        current_server.included_categories = {}
+                        for category in util.gsplit(input_text, ",") do
+                            table.insert(current_server.included_categories, util.trim(category))
+                        end
+                        self._manager.updated = true
+                        UIManager:close(dialog)
+                        if self.paths and #self.paths > 0 and self.paths[#self.paths] then
+                            self:updateCatalog(self.paths[#self.paths].url, true)
+                        end
+                    end,
+                },
+            },
+        },
+    }
+    UIManager:show(dialog)
+    dialog:onShowKeyboard()
+end
+
 -- Shows facet menu for OPDS catalogs with facets/search support
 function OPDSBrowser:showFacetMenu()
     local buttons = {}
@@ -374,6 +497,8 @@ local function buildRootEntry(server)
         sync_dir   = server.sync_dir,  -- Add this line
         excluded_authors = server.excluded_authors,
         excluded_categories = server.excluded_categories,
+        included_authors = server.included_authors,
+        included_categories = server.included_categories,
     }
 end
 
@@ -413,6 +538,12 @@ function OPDSBrowser:addEditCatalog(item)
         {
             hint = _("Excluded Categories (optional)"),
         },
+        {
+            hint = _("Included Authors (optional)"),
+        },
+        {
+            hint = _("Included Categories (optional)"),
+        },
     }
     local title
     if item then
@@ -423,6 +554,8 @@ function OPDSBrowser:addEditCatalog(item)
         fields[4].text = item.password
         fields[5].text = table.concat(item.excluded_authors or {}, ", ")
         fields[6].text = table.concat(item.excluded_categories or {}, ", ")
+        fields[7].text = table.concat(item.included_authors or {}, ", ")
+        fields[8].text = table.concat(item.included_categories or {}, ", ")
     else
         title = _("Add OPDS catalog")
     end
@@ -444,9 +577,9 @@ function OPDSBrowser:addEditCatalog(item)
                     text = _("Save"),
                     callback = function()
                         local new_fields = dialog:getFields()
-                        new_fields[7] = check_button_raw_names.checked or nil
-                        new_fields[8] = check_button_sync_catalog.checked or nil
-                        new_fields[9] = button_sync_dir.sync_dir or nil
+                        new_fields[9] = check_button_raw_names.checked or nil
+                        new_fields[10] = check_button_sync_catalog.checked or nil
+                        new_fields[11] = button_sync_dir.sync_dir or nil
                         self:editCatalogFromInput(new_fields, item)
                         UIManager:close(dialog)
                     end,
@@ -542,9 +675,11 @@ function OPDSBrowser:editCatalogFromInput(fields, item, no_refresh)
         password  = fields[4] ~= "" and fields[4] or nil,
         excluded_authors = {},
         excluded_categories = {},
-        raw_names = fields[7],
-        sync      = fields[8],
-        sync_dir  = fields[9],
+        included_authors = {},
+        included_categories = {},
+        raw_names = fields[9],
+        sync      = fields[10],
+        sync_dir  = fields[11],
     }
 
     -- Parse excluded authors
@@ -558,6 +693,20 @@ function OPDSBrowser:editCatalogFromInput(fields, item, no_refresh)
     if fields[6] and fields[6] ~= "" then
         for category in util.gsplit(fields[6], ",") do
             table.insert(new_server.excluded_categories, util.trim(category))
+        end
+    end
+
+    -- Parse included authors
+    if fields[7] and fields[7] ~= "" then
+        for author in util.gsplit(fields[7], ",") do
+            table.insert(new_server.included_authors, util.trim(author))
+        end
+    end
+
+    -- Parse included categories
+    if fields[8] and fields[8] ~= "" then
+        for category in util.gsplit(fields[8], ",") do
+            table.insert(new_server.included_categories, util.trim(category))
         end
     end
 
@@ -907,7 +1056,6 @@ function OPDSBrowser:genItemTableFromCatalog(catalog, item_url)
         item.author = author
         item.content = entry.content or entry.summary
 
-        -- Check for excluded authors
         local current_server
         for _, server in ipairs(self.servers) do
             if server.title == self.root_catalog_title then
@@ -916,22 +1064,55 @@ function OPDSBrowser:genItemTableFromCatalog(catalog, item_url)
             end
         end
 
-        if current_server and current_server.excluded_authors then
-            local lower_author = (author or ""):lower()
-            for _, excluded_author in ipairs(current_server.excluded_authors) do
-                if lower_author:find((excluded_author or ""):lower(), 1, true) then
-                    goto continue_entry
+        if current_server then
+            -- Handle includes first
+            if current_server.included_authors and #current_server.included_authors > 0 then
+                local author_found = false
+                local lower_author = (author or ""):lower()
+                for _, included_author in ipairs(current_server.included_authors) do
+                    if lower_author:find((included_author or ""):lower(), 1, true) then
+                        author_found = true
+                        break
+                    end
+                end
+                if not author_found then goto continue_entry end
+            end
+
+            if current_server.included_categories and #current_server.included_categories > 0 and entry.category then
+                local category_found = false
+                for _, included_category in ipairs(current_server.included_categories) do
+                    local lower_included_category = (included_category or ""):lower()
+                    for _, category_entry in ipairs(entry.category) do
+                        if category_entry.term and category_entry.term:lower():find(lower_included_category, 1, true) then
+                            category_found = true
+                            break
+                        end
+                    end
+                    if category_found then break end
+                end
+                if not category_found then goto continue_entry end
+            elseif current_server.included_categories and #current_server.included_categories > 0 and (not entry.category or #entry.category == 0) then
+                -- if include categories are set, but the entry has no categories, it should be excluded.
+                goto continue_entry
+            end
+
+            -- Then handle excludes
+            if current_server.excluded_authors and #current_server.excluded_authors > 0 then
+                local lower_author = (author or ""):lower()
+                for _, excluded_author in ipairs(current_server.excluded_authors) do
+                    if lower_author:find((excluded_author or ""):lower(), 1, true) then
+                        goto continue_entry
+                    end
                 end
             end
-        end
 
-        -- Check for excluded categories
-        if current_server and current_server.excluded_categories and entry.category then
-            for _, excluded_category in ipairs(current_server.excluded_categories) do
-                local lower_excluded_category = (excluded_category or ""):lower()
-                for _, category_entry in ipairs(entry.category) do
-                    if category_entry.term and category_entry.term:lower():find(lower_excluded_category, 1, true) then
-                        goto continue_entry
+            if current_server.excluded_categories and #current_server.excluded_categories > 0 and entry.category then
+                for _, excluded_category in ipairs(current_server.excluded_categories) do
+                    local lower_excluded_category = (excluded_category or ""):lower()
+                    for _, category_entry in ipairs(entry.category) do
+                        if category_entry.term and category_entry.term:lower():find(lower_excluded_category, 1, true) then
+                            goto continue_entry
+                        end
                     end
                 end
             end
