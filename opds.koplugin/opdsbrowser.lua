@@ -177,84 +177,112 @@ function OPDSBrowser:showExcludeFiltersMenu()
     }  
     UIManager:show(dialog)  
 end
-function OPDSBrowser:setExcludedAuthors()  
-    local current_excluded = table.concat(self.settings.excluded_authors or {}, ", ")  
-    local dialog  -- Declare first  
-    dialog = InputDialog:new{  
-        title = _("Excluded Authors"),  
-        description = _("Comma-separated list of authors to exclude"),  
-        input_hint = _("Author One, Author Two"),  
-        input = current_excluded,  
-        buttons = {  
-            {  
-                {  
-                    text = _("Cancel"),  
-                    id = "close",  
-                    callback = function()  
-                        UIManager:close(dialog)  
-                    end,  
-                },  
-                {  
-                    text = _("Save"),  
-                    is_enter_default = true,  
-                    callback = function()  
-                        local input_text = dialog:getInputText()  
-                        self.settings.excluded_authors = {}  
-                        for author in util.gsplit(input_text, ",") do  
-                            table.insert(self.settings.excluded_authors, util.trim(author))  
-                        end  
-                        self._manager.updated = true  
-                        UIManager:close(dialog)  
-                        if self.paths and #self.paths > 0 and self.paths[#self.paths] then  
-                            self:updateCatalog(self.paths[#self.paths].url, true)  
-                        end   
-                    end,  
-                },  
-            },  
-        },  
-    }  
-    UIManager:show(dialog)  
-    dialog:onShowKeyboard()  
-end  
-  
-function OPDSBrowser:setExcludedCategories()  
-    local current_excluded = table.concat(self.settings.excluded_categories or {}, ", ")  
-    local dialog  -- Declare first  
-    dialog = InputDialog:new{  
-        title = _("Excluded Categories"),  
-        description = _("Comma-separated list of categories to exclude"),  
-        input_hint = _("Fiction, Non-Fiction"),  
-        input = current_excluded,  
-        buttons = {  
-            {  
-                {  
-                    text = _("Cancel"),  
-                    id = "close",  
-                    callback = function()  
-                        UIManager:close(dialog)  
-                    end,  
-                },  
-                {  
-                    text = _("Save"),  
-                    is_enter_default = true,  
-                    callback = function()  
-                        local input_text = dialog:getInputText()  
-                        self.settings.excluded_categories = {}  
-                        for category in util.gsplit(input_text, ",") do  
-                            table.insert(self.settings.excluded_categories, util.trim(category))  
-                        end  
-                        self._manager.updated = true  
-                        UIManager:close(dialog)  
-                        if self.paths and #self.paths > 0 and self.paths[#self.paths] then  
-                            self:updateCatalog(self.paths[#self.paths].url, true)  
-                        end   
-                    end,  
-                },  
-            },  
-        },  
-    }  
-    UIManager:show(dialog)  
-    dialog:onShowKeyboard()  
+function OPDSBrowser:setExcludedAuthors()
+    -- Find current server
+    local current_server = nil
+    for _, server in ipairs(self.servers) do
+        if server.title == self.root_catalog_title then
+            current_server = server
+            break
+        end
+    end
+
+    if not current_server then
+        UIManager:show(InfoMessage:new{text = _("No catalog selected")})
+        return
+    end
+
+    local current_excluded = table.concat(current_server.excluded_authors or {}, ", ")
+    local dialog
+    dialog = InputDialog:new{
+        title = _("Excluded Authors"),
+        description = _("Comma-separated list of authors to exclude"),
+        input_hint = _("Author One, Author Two"),
+        input = current_excluded,
+        buttons = {
+            {
+                {
+                    text = _("Cancel"),
+                    id = "close",
+                    callback = function()
+                        UIManager:close(dialog)
+                    end,
+                },
+                {
+                    text = _("Save"),
+                    is_enter_default = true,
+                    callback = function()
+                        local input_text = dialog:getInputText()
+                        current_server.excluded_authors = {}
+                        for author in util.gsplit(input_text, ",") do
+                            table.insert(current_server.excluded_authors, util.trim(author))
+                        end
+                        self._manager.updated = true
+                        UIManager:close(dialog)
+                        if self.paths and #self.paths > 0 and self.paths[#self.paths] then
+                            self:updateCatalog(self.paths[#self.paths].url, true)
+                        end
+                    end,
+                },
+            },
+        },
+    }
+    UIManager:show(dialog)
+    dialog:onShowKeyboard()
+end
+
+function OPDSBrowser:setExcludedCategories()
+    -- Find current server
+    local current_server = nil
+    for _, server in ipairs(self.servers) do
+        if server.title == self.root_catalog_title then
+            current_server = server
+            break
+        end
+    end
+
+    if not current_server then
+        UIManager:show(InfoMessage:new{text = _("No catalog selected")})
+        return
+    end
+
+    local current_excluded = table.concat(current_server.excluded_categories or {}, ", ")
+    local dialog
+    dialog = InputDialog:new{
+        title = _("Excluded Categories"),
+        description = _("Comma-separated list of categories to exclude"),
+        input_hint = _("Fiction, Non-Fiction"),
+        input = current_excluded,
+        buttons = {
+            {
+                {
+                    text = _("Cancel"),
+                    id = "close",
+                    callback = function()
+                        UIManager:close(dialog)
+                    end,
+                },
+                {
+                    text = _("Save"),
+                    is_enter_default = true,
+                    callback = function()
+                        local input_text = dialog:getInputText()
+                        current_server.excluded_categories = {}
+                        for category in util.gsplit(input_text, ",") do
+                            table.insert(current_server.excluded_categories, util.trim(category))
+                        end
+                        self._manager.updated = true
+                        UIManager:close(dialog)
+                        if self.paths and #self.paths > 0 and self.paths[#self.paths] then
+                            self:updateCatalog(self.paths[#self.paths].url, true)
+                        end
+                    end,
+                },
+            },
+        },
+    }
+    UIManager:show(dialog)
+    dialog:onShowKeyboard()
 end
 
 -- Shows facet menu for OPDS catalogs with facets/search support
@@ -344,6 +372,8 @@ local function buildRootEntry(server)
         searchable = server.url and server.url:match("%%s") and true or false,
         sync       = server.sync,
         sync_dir   = server.sync_dir,  -- Add this line
+        excluded_authors = server.excluded_authors,
+        excluded_categories = server.excluded_categories,
     }
 end
 
@@ -377,6 +407,12 @@ function OPDSBrowser:addEditCatalog(item)
             hint = _("Password (optional)"),
             text_type = "password",
         },
+        {
+            hint = _("Excluded Authors (optional)"),
+        },
+        {
+            hint = _("Excluded Categories (optional)"),
+        },
     }
     local title
     if item then
@@ -385,6 +421,8 @@ function OPDSBrowser:addEditCatalog(item)
         fields[2].text = item.url
         fields[3].text = item.username
         fields[4].text = item.password
+        fields[5].text = table.concat(item.excluded_authors or {}, ", ")
+        fields[6].text = table.concat(item.excluded_categories or {}, ", ")
     else
         title = _("Add OPDS catalog")
     end
@@ -406,9 +444,9 @@ function OPDSBrowser:addEditCatalog(item)
                     text = _("Save"),
                     callback = function()
                         local new_fields = dialog:getFields()
-                        new_fields[5] = check_button_raw_names.checked or nil
-                        new_fields[6] = check_button_sync_catalog.checked or nil
-                        new_fields[7] = button_sync_dir.sync_dir or nil
+                        new_fields[7] = check_button_raw_names.checked or nil
+                        new_fields[8] = check_button_sync_catalog.checked or nil
+                        new_fields[9] = button_sync_dir.sync_dir or nil
                         self:editCatalogFromInput(new_fields, item)
                         UIManager:close(dialog)
                     end,
@@ -416,7 +454,7 @@ function OPDSBrowser:addEditCatalog(item)
             },
         },
     }
-    
+
     -- Existing check buttons...
     check_button_raw_names = CheckButton:new{
         text = _("Use server filenames"),
@@ -428,7 +466,7 @@ function OPDSBrowser:addEditCatalog(item)
         checked = item and item.sync,
         parent = dialog,
     }
-    
+
     -- Add sync directory button
     button_sync_dir = Button:new{
         text = item and item.sync_dir and _("Sync folder: ") .. item.sync_dir or _("Set sync folder"),
@@ -437,7 +475,7 @@ function OPDSBrowser:addEditCatalog(item)
             if Device:isAndroid() then
                 force_chooser_dir_for_per_catalog = Device.home_dir
             end
-            
+
             -- Use item.sync_dir or self.settings.sync_dir as initial path
             local initial_path = item and item.sync_dir or self.settings.sync_dir or G_reader_settings:readSetting("download_dir")
 
@@ -452,7 +490,7 @@ function OPDSBrowser:addEditCatalog(item)
             }:chooseDir(initial_path or force_chooser_dir_for_per_catalog)
         end,
     }
-    
+
     dialog:addWidget(check_button_raw_names)
     dialog:addWidget(check_button_sync_catalog)
     dialog:addWidget(button_sync_dir)
@@ -502,10 +540,27 @@ function OPDSBrowser:editCatalogFromInput(fields, item, no_refresh)
         url       = fields[2]:match("^%a+://") and fields[2] or "http://" .. fields[2],
         username  = fields[3] ~= "" and fields[3] or nil,
         password  = fields[4] ~= "" and fields[4] or nil,
-        raw_names = fields[5],
-        sync      = fields[6],
-        sync_dir  = fields[7],  -- Add this line
+        excluded_authors = {},
+        excluded_categories = {},
+        raw_names = fields[7],
+        sync      = fields[8],
+        sync_dir  = fields[9],
     }
+
+    -- Parse excluded authors
+    if fields[5] and fields[5] ~= "" then
+        for author in util.gsplit(fields[5], ",") do
+            table.insert(new_server.excluded_authors, util.trim(author))
+        end
+    end
+
+    -- Parse excluded categories
+    if fields[6] and fields[6] ~= "" then
+        for category in util.gsplit(fields[6], ",") do
+            table.insert(new_server.excluded_categories, util.trim(category))
+        end
+    end
+
     local new_item = buildRootEntry(new_server)
     local new_idx, itemnumber
     if item then
@@ -853,9 +908,17 @@ function OPDSBrowser:genItemTableFromCatalog(catalog, item_url)
         item.content = entry.content or entry.summary
 
         -- Check for excluded authors
-        if self.settings.excluded_authors then
+        local current_server
+        for _, server in ipairs(self.servers) do
+            if server.title == self.root_catalog_title then
+                current_server = server
+                break
+            end
+        end
+
+        if current_server and current_server.excluded_authors then
             local lower_author = (author or ""):lower()
-            for _, excluded_author in ipairs(self.settings.excluded_authors) do
+            for _, excluded_author in ipairs(current_server.excluded_authors) do
                 if lower_author:find((excluded_author or ""):lower(), 1, true) then
                     goto continue_entry
                 end
@@ -863,8 +926,8 @@ function OPDSBrowser:genItemTableFromCatalog(catalog, item_url)
         end
 
         -- Check for excluded categories
-        if self.settings.excluded_categories and entry.category then
-            for _, excluded_category in ipairs(self.settings.excluded_categories) do
+        if current_server and current_server.excluded_categories and entry.category then
+            for _, excluded_category in ipairs(current_server.excluded_categories) do
                 local lower_excluded_category = (excluded_category or ""):lower()
                 for _, category_entry in ipairs(entry.category) do
                     if category_entry.term and category_entry.term:lower():find(lower_excluded_category, 1, true) then
