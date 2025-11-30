@@ -232,35 +232,27 @@ function OPDS:performAutoSync()
     self.sync_in_progress = true
     logger.info("OPDS: Starting auto-sync")
 
-    -- Wrap sync in a protected call
-    local success, err = pcall(function()
-        -- Create browser instance if it doesn't exist
-        if not self.opds_browser then
-            self.opds_browser = OPDSBrowser:new{
-                servers = self.servers,
-                downloads = self.downloads,
-                settings = self.settings,
-                pending_syncs = self.pending_syncs,
-                title = _("OPDS catalog"),
-                is_popout = false,
-                is_borderless = true,
-                title_bar_fm_style = true,
-                _manager = self,
-            }
-        end
+    -- Create browser instance if it doesn't exist
+    if not self.opds_browser then
+        self.opds_browser = OPDSBrowser:new{
+            servers = self.servers,
+            downloads = self.downloads,
+            settings = self.settings,
+            pending_syncs = self.pending_syncs,
+            title = _("OPDS catalog"),
+            is_popout = false,
+            is_borderless = true,
+            title_bar_fm_style = true,
+            _manager = self,
+        }
+    end
+
+    if self.opds_browser then
         self.opds_browser.sync_force = false
-        self.opds_browser:checkSyncDownload()
-    end)
+        self.opds_browser:checkSyncDownload(nil, true) -- Pass true for auto_sync
+    end
 
     self.sync_in_progress = false
-
-    if success then
-        self.settings.last_sync_time = now
-        self.updated = true
-        self:saveSettings()
-    else
-        logger.err("OPDS: Auto-sync failed:", err)
-    end
 end
 
 function OPDS:saveSettings()

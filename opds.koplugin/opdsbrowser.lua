@@ -1844,7 +1844,7 @@ function OPDSBrowser:downloadDownloadList()
         self:updateDownloadListItemTable()
         self.download_list_updated = true
         self._manager.updated = true
-        UIManager:show(InfoMessage:new{ text = T(N_("1 book downloaded", "%1 books downloaded", dl_count), dl_count) })
+        UIManager:show(Notification:new{ text = T(N_("1 book downloaded", "%1 books downloaded", dl_count), dl_count) })
     end
 end
 
@@ -1937,16 +1937,19 @@ function OPDSBrowser:updateFieldInCatalog(item, name, value)
     self._manager.updated = true
 end
 
-function OPDSBrowser:checkSyncDownload(idx)
+function OPDSBrowser:checkSyncDownload(idx, auto_sync)
     logger.info("OPDS: checkSyncDownload called, sync_dir =", self.settings.sync_dir)
     if self.settings.sync_dir then
         logger.info("OPDS: Starting sync process")
         self.sync = true
-        local info = InfoMessage:new{
-            text = _("Synchronizing lists…"),
-        }
-        UIManager:show(info)
-        UIManager:forceRePaint()
+        local info
+        if not auto_sync then
+            info = InfoMessage:new{
+                text = _("Synchronizing lists…"),
+            }
+            UIManager:show(info)
+            UIManager:forceRePaint()
+        end
         if idx then
             self:fillPendingSyncs(self.servers[idx-1]) -- First item is "Downloads"
         else
@@ -1956,20 +1959,24 @@ function OPDSBrowser:checkSyncDownload(idx)
                 end
             end
         end
-        UIManager:close(info)
+        if not auto_sync and info then
+            UIManager:close(info)
+        end
         if #self.pending_syncs > 0 then
             Trapper:wrap(function()
-                self:downloadPendingSyncs()
+                self:downloadPendingSyncs(auto_sync) -- Pass auto_sync flag
                 -- Update last sync time after successful downloads
                 self.settings.last_sync_time = os.time()
                 self._manager.updated = true
                 self._manager:saveSettings()
             end)
         else
-            UIManager:show(InfoMessage:new{
-                text = _("Up to date!"),
-            })
-            logger.info("OPDS: Sync complete")
+            -- Only show "Up to date!" for manual sync
+            if not auto_sync then
+                UIManager:show(InfoMessage:new{
+                    text = _("Up to date!"),
+                })
+            end
             -- Update last sync time even if nothing new
             self.settings.last_sync_time = os.time()
             self._manager.updated = true
@@ -2117,12 +2124,15 @@ function OPDSBrowser:getSyncDownloadList(url_arg)
 end
 
 -- Download pending syncs list
-function OPDSBrowser:downloadPendingSyncs()
+function OPDSBrowser:downloadPendingSyncs(auto_sync)
     local dl_list = self.pending_syncs
     local function dismissable_download()
-        local info = InfoMessage:new{ text = _("Downloading… (tap to cancel)") }
-        UIManager:show(info)
-        UIManager:forceRePaint()
+        local info
+        if not auto_sync then
+            info = InfoMessage:new{ text = _("Downloading… (tap to cancel)") }
+            UIManager:show(info)
+            UIManager:forceRePaint()
+        end
         local completed, downloaded, duplicate_list = Trapper:dismissableRunInSubprocess(function()
             local dl = {}
             local dupe_list = {}
@@ -2140,7 +2150,7 @@ function OPDSBrowser:downloadPendingSyncs()
             return dl, dupe_list
         end, info)
 
-        if completed then
+        if completed and info then
             UIManager:close(info)
         end
         local dl_count = 0
@@ -2168,11 +2178,13 @@ function OPDSBrowser:downloadPendingSyncs()
         dl_count = dl_count - duplicate_count
         -- Make downloaded count timeout if there's a duplicate file prompt
         local timeout = nil
-        if duplicate_count > 0 then
+        if duplicate_count > 0 and not auto_sync then
             timeout = 3
         end
         if dl_count > 0 then
-            UIManager:show(InfoMessage:new{ text = T(N_("1 book downloaded", "%1 books downloaded", dl_count), dl_count), timeout = timeout,})
+            UIManager:show(Notification:new{
+                text = T(N_("1 book downloaded", "%1 books downloaded", dl_count), dl_count)
+            })
         end
         self._manager.updated = true
         return duplicate_list
@@ -2181,61 +2193,65 @@ function OPDSBrowser:downloadPendingSyncs()
     local duplicate_list = dismissable_download()
 
     if duplicate_list and #duplicate_list > 0 then
-        local textviewer
-        local duplicate_files = { _("These files are already on the device:") }
-        for _, entry in ipairs(duplicate_list) do
-            table.insert(duplicate_files, entry.file)
-        end
-        local text = table.concat(duplicate_files, "\n")
-        textviewer = TextViewer:new{
-            title = _("Duplicate files"),
-            text = text,
-            buttons_table = {
-                {
+        if auto_sync then
+            logger.info("OPDS: Auto-sync - skipping", #duplicate_list, "duplicate files")
+        else
+            local textviewer
+            local duplicate_files = { _("These files are already on the device:") }
+            for _, entry in ipairs(duplicate_list) do
+                table.insert(duplicate_files, entry.file)
+            end
+            local text = table.concat(duplicate_files, "\n")
+            textviewer = TextViewer:new{
+                title = _("Duplicate files"),
+                text = text,
+                buttons_table = {
                     {
-                        text = _("Do nothing"),
-                        callback = function()
-                            textviewer:onClose()
-                        end
-                    },
-                    {
-                        text = _("Overwrite"),
-                        callback = function()
-                            self.sync_force = true
-                            textviewer:onClose()
-                            for _, entry in ipairs(duplicate_list) do
-                                table.insert(dl_list, entry)
+                        {
+                            text = _("Do nothing"),
+                            callback = function()
+                                textviewer:onClose()
                             end
-                            Trapper:wrap(function()
-                                dismissable_download()
-                            end)
-                        end
-                    },
-                    {
-                        text = _("Download copies"),
-                        callback = function()
-                            self.sync_force = true
-                            textviewer:onClose()
-                            local copy_download_dir, original_dir, copies_dir, copy_download_path
-                            copies_dir = "copies"
-                            original_dir = util.splitFilePathName(duplicate_list[1].file)
-                            copy_download_dir = original_dir .. copies_dir .. "/"
-                            util.makePath(copy_download_dir)
-                            for _, entry in ipairs(duplicate_list) do
-                                local _, file_name = util.splitFilePathName(entry.file)
-                                copy_download_path = copy_download_dir .. file_name
-                                entry.file = copy_download_path
-                                table.insert(dl_list, entry)
+                        },
+                        {
+                            text = _("Overwrite"),
+                            callback = function()
+                                self.sync_force = true
+                                textviewer:onClose()
+                                for _, entry in ipairs(duplicate_list) do
+                                    table.insert(dl_list, entry)
+                                end
+                                Trapper:wrap(function()
+                                    dismissable_download()
+                                end)
                             end
-                            Trapper:wrap(function()
-                                dismissable_download()
-                            end)
-                        end
+                        },
+                        {
+                            text = _("Download copies"),
+                            callback = function()
+                                self.sync_force = true
+                                textviewer:onClose()
+                                local copy_download_dir, original_dir, copies_dir, copy_download_path
+                                copies_dir = "copies"
+                                original_dir = util.splitFilePathName(duplicate_list[1].file)
+                                copy_download_dir = original_dir .. copies_dir .. "/"
+                                util.makePath(copy_download_dir)
+                                for _, entry in ipairs(duplicate_list) do
+                                    local _, file_name = util.splitFilePathName(entry.file)
+                                    copy_download_path = copy_download_dir .. file_name
+                                    entry.file = copy_download_path
+                                    table.insert(dl_list, entry)
+                                end
+                                Trapper:wrap(function()
+                                    dismissable_download()
+                                end)
+                            end
+                        },
                     },
                 },
-            },
-        }
-        UIManager:show(textviewer)
+            }
+            UIManager:show(textviewer)
+        end
     end
 end
 return OPDSBrowser
