@@ -4,11 +4,9 @@ This project provides an enhanced OPDS (Open Publication Distribution System) pl
 
 ## Features
 
-*   **OPDS Catalog Browsing:** Seamlessly browse and discover content from various OPDS feeds.
 *   **Automated Synchronization:** Keep your catalogs synced automatically with periodic and event-based triggers (e.g., on network connection or resume).
-*   **Per-Catalog Sync Folders:** Assign a dedicated synchronization directory for each OPDS catalog, preventing clutter and improving organization of your downloaded files.
-*   **Global Sync Directory:** Fallback to a global synchronization directory if a per-catalog folder is not specified.
-*   **Configurable Download Behavior:** Options for using server filenames and enabling/disabling sync per catalog.
+*   **Per-Catalog Sync Folders:** Assign a dedicated synchronization directory for each OPDS catalog, preventing clutter and improving organization of your downloaded files. Falls back to a global sync directory if not set per-catalog.
+*   **Include/Exclude Filters:** Fine-tune your syncs by setting include or exclude filters for authors and categories on a per-catalog basis.
 
 ## Installation
 
@@ -48,6 +46,26 @@ Your directory structure should look something like this:
 5.  **Sync Catalog:** Check this option if you want Koreader to automatically synchronize content from this catalog.
 6.  **Set Sync Folder:** A new button labeled "Set sync folder" (or "Sync folder: [path]" if already set) will allow you to choose a specific directory on your device where books from *this catalog* will be downloaded. If left unset, the global sync folder or default download directory will be used.
 7.  Tap **"Save"**.
+
+### Filtering
+
+You can control which books are synced from a catalog by setting filters for authors and categories. These filters can be accessed when adding or editing a catalog.
+
+*   **Excluded Authors/Categories:** A comma-separated list of authors or categories to exclude from synchronization.
+*   **Included Authors/Categories:** A comma-separated list of authors or categories to include in synchronization. If this is set, only items that match will be synced.
+
+**Filter Precedence:**
+
+The include and exclude filters work together to give you fine-grained control. Here's how they interact:
+
+| Included Authors/Categories | Excluded Authors/Categories | Behavior                                                                                                                              |
+| --------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Not Set                     | Not Set                     | All books from the catalog are synced.                                                                                                |
+| Not Set                     | Set                         | All books are synced, *except* those matching the excluded authors/categories.                                                        |
+| Set                         | Not Set                     | Only books matching the included authors/categories are synced.                                                                       |
+| Set                         | Set                         | Only books matching the included authors/categories are considered. From that set, any books matching the excluded list are removed. |
+
+For example, if you include the category "Science Fiction" and exclude the author "John Doe", you will get all science fiction books except for those written by John Doe.
 
 ### Automated Synchronization
 
