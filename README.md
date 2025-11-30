@@ -5,6 +5,7 @@ This project provides an enhanced OPDS (Open Publication Distribution System) pl
 ## Features
 
 *   **OPDS Catalog Browsing:** Seamlessly browse and discover content from various OPDS feeds.
+*   **Automated Synchronization:** Keep your catalogs synced automatically with periodic and event-based triggers (e.g., on network connection or resume).
 *   **Per-Catalog Sync Folders:** Assign a dedicated synchronization directory for each OPDS catalog, preventing clutter and improving organization of your downloaded files.
 *   **Global Sync Directory:** Fallback to a global synchronization directory if a per-catalog folder is not specified.
 *   **Configurable Download Behavior:** Options for using server filenames and enabling/disabling sync per catalog.
@@ -46,6 +47,18 @@ Your directory structure should look something like this:
 5.  **Sync Catalog:** Check this option if you want Koreader to automatically synchronize content from this catalog.
 6.  **Set Sync Folder:** A new button labeled "Set sync folder" (or "Sync folder: [path]" if already set) will allow you to choose a specific directory on your device where books from *this catalog* will be downloaded. If left unset, the global sync folder or default download directory will be used.
 7.  Tap **"Save"**.
+
+### Automated Synchronization
+
+This plugin now supports automated synchronization to keep your library up-to-date without manual intervention.
+
+*   **How it Works:** When enabled, auto-sync will periodically check for new content in your synced catalogs. By default, this check occurs every 24 hours.
+*   **Event-Based Triggers:** In addition to the periodic sync, the plugin will also trigger a sync when:
+    *   Your device connects to a network.
+    *   Your device resumes from sleep.
+*   **Configuration:** You can manage auto-sync directly from the OPDS catalog menu:
+    *   **Auto-sync: On/Off:** Toggle the automated synchronization feature. It is enabled by default.
+    *   **Last sync:** Displays the date and time of the last successful synchronization.
 
 ### Synchronization
 
