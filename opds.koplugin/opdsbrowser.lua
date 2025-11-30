@@ -78,6 +78,9 @@ end
 
 function OPDSBrowser:showOPDSMenu()
     local dialog
+    local auto_sync_status = self._manager.settings.auto_sync and _("On") or _("Off")
+    local last_sync = self._manager.settings.last_sync_time
+    local last_sync_text = last_sync > 0 and os.date("%Y-%m-%d %H:%M", last_sync) or _("Never")
     dialog = ButtonDialog:new{
         buttons = {
             {{
@@ -87,6 +90,31 @@ function OPDSBrowser:showOPDSMenu()
                         self:addEditCatalog()
                     end,
                     align = "left",
+            }},
+            {},
+            {{
+                text = _("Auto-sync: ") .. auto_sync_status,
+                callback = function()
+                    UIManager:close(dialog)
+                    self._manager.settings.auto_sync = not self._manager.settings.auto_sync
+                    self._manager.updated = true
+                    if self._manager.settings.auto_sync then
+                        self._manager:schedulePeriodicSync()
+                        self._manager:registerAutoSyncEvents()
+                    else
+                        UIManager:unschedule(self._manager.periodic_sync_task)
+                        self._manager:registerAutoSyncEvents()
+                    end
+                    UIManager:show(InfoMessage:new{
+                        text = self._manager.settings.auto_sync and _("Auto-sync enabled") or _("Auto-sync disabled"),
+                    })
+                end,
+                align = "left",
+            }},
+            {{
+                text = _("Last sync: ") .. last_sync_text,
+                enabled = false,
+                align = "left",
             }},
             {},
             {{
@@ -1910,7 +1938,9 @@ function OPDSBrowser:updateFieldInCatalog(item, name, value)
 end
 
 function OPDSBrowser:checkSyncDownload(idx)
+    logger.info("OPDS: checkSyncDownload called, sync_dir =", self.settings.sync_dir)
     if self.settings.sync_dir then
+        logger.info("OPDS: Starting sync process")
         self.sync = true
         local info = InfoMessage:new{
             text = _("Synchronizing lists…"),
@@ -1930,14 +1960,23 @@ function OPDSBrowser:checkSyncDownload(idx)
         if #self.pending_syncs > 0 then
             Trapper:wrap(function()
                 self:downloadPendingSyncs()
+                -- Update last sync time after successful downloads
+                self.settings.last_sync_time = os.time()
+                self._manager.updated = true
+                self._manager:saveSettings()
             end)
         else
             UIManager:show(InfoMessage:new{
                 text = _("Up to date!"),
             })
+            logger.info("OPDS: Sync complete")
+            -- Update last sync time even if nothing new
+            self.settings.last_sync_time = os.time()
+            self._manager.updated = true
         end
         self.sync = false
     else
+        logger.info("OPDS: No sync directory configured")
         UIManager:show(InfoMessage:new{
             text = _("Please choose a folder for sync downloads first"),
         })
