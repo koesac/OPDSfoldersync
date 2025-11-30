@@ -12,11 +12,12 @@ This project provides an enhanced OPDS (Open Publication Distribution System) pl
 
 ## Installation
 
-To install the OPDSfoldersync plugin, follow these steps:
+This plugin **replaces and extends** the default OPDS plugin that comes with Koreader. To avoid conflicts, you must remove the original before installing this version.
 
 1.  **Locate your Koreader installation directory.** This is typically where your `koreader.app` or `koreader.sh` executable resides.
 2.  **Navigate to the `plugins` directory** within your Koreader installation (e.g., `/koreader/plugins/`).
-3.  **Copy the `opds.koplugin` folder** from this repository directly into Koreader's `plugins` directory.
+3.  **Delete the existing `opds.koplugin` directory.** This step is crucial to ensure the new plugin loads correctly.
+4.  **Copy the `opds.koplugin` folder** from this repository directly into Koreader's `plugins` directory.
     *   Make sure you copy the entire `opds.koplugin` directory, not just its contents.
 
 Your directory structure should look something like this:
@@ -34,7 +35,7 @@ Your directory structure should look something like this:
 ├── (other Koreader files...)
 ```
 
-4.  **Restart Koreader** to load the new plugin.
+5.  **Restart Koreader** to load the new plugin.
 
 ## Usage
 
