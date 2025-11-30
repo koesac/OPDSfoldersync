@@ -1280,13 +1280,13 @@ function OPDSBrowser:showDownloads(item)
                     text = text .. "\u{2B07}", -- append DOWNWARDS BLACK ARROW
                     callback = function()
                         UIManager:close(self.download_dialog)
-                        local local_path = self:getLocalDownloadPath(filename, filetype, acquisition.href)
+                        local local_path = self:getLocalDownloadPath(nil, filename, filetype, acquisition.href)
                         self:checkDownloadFile(local_path, acquisition.href, self.root_catalog_username, self.root_catalog_password, self.file_downloaded_callback)
                     end,
                     hold_callback = function()
                         UIManager:close(self.download_dialog)
                         table.insert(self.downloads, {
-                            file     = self:getLocalDownloadPath(filename, filetype, acquisition.href),
+                            file     = self:getLocalDownloadPath(nil, filename, filetype, acquisition.href),
                             url      = acquisition.href,
                             info     = type(item.content) == "string" and util.htmlToPlainTextIfHtml(item.content) or "",
                             catalog  = self.root_catalog_title,
