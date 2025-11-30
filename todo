@@ -1,8 +1,0 @@
-remove OPDS features only list the additional features we offer
-which are 
-automated sync 
-sync folders per cat - add global sync dir as a fallback under this feature not a separate feature
-include/exclude filters by author and category - make this the last bullet replacing configurable download behavior
-
-update the usage isntructions.
-be detailed about how to configure the include and exclude - with a table that shows how the two interact - ie. which take precedent
