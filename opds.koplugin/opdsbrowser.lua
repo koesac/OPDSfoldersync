@@ -1962,13 +1962,21 @@ function OPDSBrowser:checkSyncDownload(idx, auto_sync)
         if not auto_sync and info then
             UIManager:close(info)
         end
+
         if #self.pending_syncs > 0 then
+            logger.info("OPDS: Found", #self.pending_syncs, "items to download")
             Trapper:wrap(function()
-                self:downloadPendingSyncs(auto_sync) -- Pass auto_sync flag
-                -- Update last sync time after successful downloads
+                local success, err = pcall(function()
+                    self:downloadPendingSyncs(auto_sync)
+                end)
+                if not success then
+                    logger.err("OPDS: Download failed:", err)
+                end
+                -- Always update last sync time
                 self.settings.last_sync_time = os.time()
                 self._manager.updated = true
                 self._manager:saveSettings()
+                logger.info("OPDS: Sync completed with downloads")
             end)
         else
             -- Only show "Up to date!" for manual sync
@@ -1977,11 +1985,13 @@ function OPDSBrowser:checkSyncDownload(idx, auto_sync)
                     text = _("Up to date!"),
                 })
             end
+            logger.info("OPDS: Sync complete - up to date")
             -- Update last sync time even if nothing new
             self.settings.last_sync_time = os.time()
             self._manager.updated = true
         end
         self.sync = false
+        logger.info("OPDS: Sync flag reset")
     else
         logger.info("OPDS: No sync directory configured")
         UIManager:show(InfoMessage:new{
@@ -2127,7 +2137,7 @@ end
 function OPDSBrowser:downloadPendingSyncs(auto_sync)
     local dl_list = self.pending_syncs
     local function dismissable_download()
-        local info
+        local info = nil -- Default to nil for auto-sync
         if not auto_sync then
             info = InfoMessage:new{ text = _("Downloading… (tap to cancel)") }
             UIManager:show(info)
@@ -2148,7 +2158,7 @@ function OPDSBrowser:downloadPendingSyncs(auto_sync)
                 end
             end
             return dl, dupe_list
-        end, info)
+        end, info) -- Pass info directly (nil for auto-sync)
 
         if completed and info then
             UIManager:close(info)
@@ -2176,15 +2186,11 @@ function OPDSBrowser:downloadPendingSyncs(auto_sync)
         end
         local duplicate_count = duplicate_list and #duplicate_list or 0
         dl_count = dl_count - duplicate_count
-        -- Make downloaded count timeout if there's a duplicate file prompt
-        local timeout = nil
-        if duplicate_count > 0 and not auto_sync then
-            timeout = 3
-        end
         if dl_count > 0 then
             UIManager:show(Notification:new{
                 text = T(N_("1 book downloaded", "%1 books downloaded", dl_count), dl_count)
             })
+            logger.info("OPDS: Download completed -", dl_count, "books")
         end
         self._manager.updated = true
         return duplicate_list
@@ -2253,5 +2259,6 @@ function OPDSBrowser:downloadPendingSyncs(auto_sync)
             UIManager:show(textviewer)
         end
     end
+    logger.info("OPDS: downloadPendingSyncs fully completed")
 end
 return OPDSBrowser
